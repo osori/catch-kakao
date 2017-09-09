@@ -11,11 +11,9 @@
     </style>
 </head>
 <body>
-<h1>플레이 방법: 화난 튜브 빼고 다 잡아 버리세요.</h1>
-<h3>성질난 튜브 건들면 어떻게 되는지는... 안알랴쥼</h3>
 <script type="text/javascript">
 
-var game = new Phaser.Game(800, 600, Phaser.AUTO, '', { preload: preload, create: create, update: update });
+var game = new Phaser.Game(window.innerWidth, window.innerHeight, Phaser.AUTO, '', { preload: preload, create: create, update: update });
 
 function preload() {
 	game.load.image('muzi-cry', 'kakao-faces/2200001.thum_021.png' );
@@ -35,9 +33,12 @@ function preload() {
 	game.load.image('jayg-coffee', 'kakao-faces/2200001.thum_077.png');
 	game.load.image('tube-angrytable', 'kakao-faces/2200002.thum_046.png');
 	game.load.image('tube-angrykick', 'kakao-faces/2200002.thum_047.png');
+	game.load.image('face-merong','kakao-faces/008.png')
 }
 
-var faces = ['muzi-cry', 'muzi-aegyo', 'muzi-delightful' , 'apeach-condescending', 'apeach-confident', 'apeach-love', 'tube-angry', 'jayg-sing', 'neo-embarrassed', 'neo-elastichair', 'tube-cheerup', 'tube-yay', 'frodo-thumbsup', 'frodo-whistle', 'jayg-coffee', 'tube-angrytable', 'tube-angrykick', 'tube-angry'];
+var faces = [ 'muzi-aegyo', 'muzi-delightful' , 'apeach-love', 'jayg-sing', 'neo-elastichair', 'tube-cheerup', 'tube-yay', 'frodo-thumbsup'];
+
+var bombs = ['tube-angrytable'];
 
 KakaoFriend = function (index, game, speedWeight) {
 	var x = game.world.randomX;
@@ -52,46 +53,73 @@ KakaoFriend = function (index, game, speedWeight) {
 	this.sprite.body.collideWorldBounds = true;
 	this.sprite.body.bounce.setTo(1,1);
 
+	this.sprite.scale.setTo(2,2);
+
 	this.sprite.angle = game.rnd.angle();
 
 	this.sprite.inputEnabled=true;
 	this.sprite.events.onInputDown.add(clickKakao, this);
 
-	game.physics.arcade.velocityFromRotation(this.sprite.rotation, (200 + Math.sqrt(speedWeight * 20)) , this.sprite.body.velocity);
+	game.physics.arcade.velocityFromRotation(this.sprite.rotation, (100 + Math.sqrt(speedWeight * 10)) , this.sprite.body.velocity);
 
 }
+
+KakaoBomb = function (index, game, speedWeight) {
+	var x = game.world.randomX;
+	var y = game.world.randomY;
+
+	this.game = game;
+	this.sprite = game.add.sprite(x, y, bombs[Math.floor(Math.random() * bombs.length)]);
+	
+	game.physics.enable(this.sprite, Phaser.Physics.ARCADE);
+	this.sprite.anchor.set(0.5);
+	this.sprite.body.immovable = false;
+	this.sprite.body.collideWorldBounds = true;
+	this.sprite.body.bounce.setTo(1,1);
+
+	this.sprite.scale.setTo(1.5,1.5);
+
+	this.sprite.angle = game.rnd.angle();
+
+	this.sprite.inputEnabled=true;
+	this.sprite.events.onInputDown.add(clickKakao, this);
+
+	game.physics.arcade.velocityFromRotation(this.sprite.rotation, (100 + Math.sqrt(speedWeight * 10)) , this.sprite.body.velocity);
+
+}
+
 var score = 0;
 var scoreText;
 var catchCount = 0;
 
+var roundText;
+
 function create() {
 
-	// kakaoFriends = game.add.group();
-
-/*
-	for (var i = 0; i < 5; i++) {
-		kakaoFriends.create(game.world.randomX, game.world.randomY, 'muzi-cry');
-		kakaoFriends.create(game.world.randomX, game.world.randomY, 'apeach-confident');
-		kakaoFriends.create(game.world.randomX, game.world.randomY, 'tube-angry');
-		kakaoFriends.create(game.world.randomX, game.world.randomY, 'jayg-sing');
-	}
-*/ 
-	// enable Arcade Physics system
 	game.physics.startSystem(Phaser.Physics.ARCADE);
 
-	game.stage.backgroundColor = '#0072bc';
-	scoreText = game.add.text(16, 16, 'score: 0', { fontSize: '32px', fill: '#fff' });
+	game.stage.backgroundColor = '#fcd411';
+	scoreText = game.add.text(16, 16, 'score: 0', { fontSize: '32px', fill: '#432f2e' });
+	roundText = game.add.text(16, 64, 'score: 0', { fontSize: '32px', fill: '#432f2e' });
 
+	roundText.text = "currRound: 1";
 
 
 	kakaoFriends = [];
-	numKakaoFriends = 30;
+	numKakaoFriends = 20;
+
+	kakaoBombs = [];
+	numKakaoBombs = 2;
 
 	for (var i=0; i<numKakaoFriends; i++) {
 		kakaoFriends.push(new KakaoFriend(i, game, 1));
 	}
 
-    game.time.events.repeat(Phaser.Timer.SECOND * 1.75, 100000, createKakao, this);
+	for (var i=0; i<numKakaoBombs; i++) {
+		kakaoBombs.push(new KakaoBomb(i, game, 1));
+	}
+
+    game.time.events.repeat(Phaser.Timer.SECOND * 20, 100000, createKakao, this);
 
 
 }
@@ -105,7 +133,7 @@ function render() {
 }
 
 function createKakao() {
-	kakaoFriends.push(new KakaoFriend(numKakaoFriends+1, game, catchCount+1));
+	kakaoFriends.push(new KakaoFriend(numKakaoFriends, game, catchCount+1));
 }
 
 function clickKakao(kakao) {
@@ -114,18 +142,39 @@ function clickKakao(kakao) {
 	if (kakao.key == 'tube-angry' || kakao.key == 'tube-angrytable') {
 		for (var i=0; i<5; i++) {
 			kakaoFriends.push(new KakaoFriend(i, game, catchCount));
-			kakao.kill();
 		}
 		score -= 300;
-		scoreText.text = 'Score: ' + score;
+		numKakaoFriends = kakaoFriends.length;
+		kakaoBombs.pop(kakao);
+		kakao.destroy();
+		scoreText.text = 'Score: ' + score + ' numKakaoFriends: ' + numKakaoFriends;
 	} else {
-		kakao.kill();
+		kakaoFriends.pop(kakao);
+		kakao.destroy();
 		score += 50;
-		scoreText.text = 'Score: ' + score;
 		catchCount += 1;
+		numKakaoFriends = kakaoFriends.length;
+		scoreText.text = 'Score: ' + score + ' numKakaoFriends: ' + numKakaoFriends;
 
 	}
 
+	if (isGameClear()) {
+		scoreText.text = 'Game Clear! ' + 'Total Score: ' + score; 
+		game.time.events.stop();
+	}
+
+}
+
+function isGameClear() {
+	if (numKakaoFriends == 0){
+		return true;
+	} else {
+		return false;
+	}
+}
+
+function showNextRound() {
+	
 }
 
 </script>

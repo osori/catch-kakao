@@ -1,0 +1,1 @@
+velocityKakao = 200;
